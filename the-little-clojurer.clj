@@ -217,11 +217,11 @@
     :else (o+ n (o* n (sub1 m)))))
 
 
-(defn tup+_v1 [tup1 tup2]
+(defn tup1+ [tup1 tup2]
   (cond
     (and (empty? tup1) (empty? tup2)) '()
     :else (cons (o+ (first tup1) (first tup2))
-                (tup+ (rest tup1) (rest tup2))) ))
+                (tup1+ (rest tup1) (rest tup2))) ))
 
 (defn tup+ [tup1 tup2]
   (cond
@@ -377,9 +377,208 @@
   (testing "one?"
     (is (= false (one? 0)))
     (is (= true (one? 1)))
-    (is (= false (one? 5))))
-  )
+    (is (= false (one? 5)))) )
 
 ;; ---------------------------------------------------------------------------
 ;; 5. Oh My Gawd: It's Full of Stars
 ;; ---------------------------------------------------------------------------
+
+(defn rember* [a l]
+  (cond
+    (empty? l) '()
+    (atom? (first l)) (cond
+                        (= a (first l)) (rember* a (rest l))
+                        :else (cons (first l)
+                                    (rember* a (rest l))))
+    :else (cons (rember* a (first l))
+                (rember* a (rest l))) ))
+
+(defn insertR*
+  "Inserts the atom new to the right of old everywhere"
+  [new old l]
+  (cond
+    (empty? l) '()
+    (atom? (first l)) (cond
+                        (= old (first l)) (cons old
+                                                (cons new
+                                                      (insertR* new old (rest l))))
+                        :else (cons (first l)
+                                    (insertR* new old (rest l))))
+    :else (cons (insertR* new old (first l))
+                (insertR* new old (rest l))) ))
+
+;; The First Commandment
+;;
+;; When recurring on a list of atoms, lat, ask two questions about it: (empty? lat) and :else.
+;; When recurring on a number, n, ask two questions about it: (zero? n) and :else.
+;; When recurring on a list of S-expressions, l, ask three questions about it:
+;; (empty? l), (atom? (first l)) and :else.
+
+(defn occur*
+  "Counts the number of times an atom a appears in a S-exp"
+  [a l]
+  (cond
+    (empty? l) 0
+    (atom? (first l)) (cond
+                        (= a (first l)) (add1 (occur* a (rest l)))
+                        :else (occur* a (rest l)))
+    :else (o+ (occur* a (first l))
+             (occur* a (rest l))) ))
+
+(defn subst* [new old l]
+  (cond
+    (empty? l) l
+    (atom? (first l)) (cond
+                        (= old (first l)) (cons new
+                                                (subst* new old (rest l)))
+                        :else (cons (first l)
+                                    (subst* new old (rest l))))
+    :else (cons (subst* new old (first l))
+                (subst* new old (rest l)))) )
+
+(defn insertL* [new old l]
+  (cond
+    (empty? l) '()
+    (atom? (first l)) (cond
+                        (= old (first l)) (cons new
+                                                (cons old
+                                                      (insertL* new old (rest l))))
+                        :else (cons (first l)
+                                    (insertL* new old (rest l))))
+    :else (cons (insertL* new old (first l))
+                (insertL* new old (rest l))) ))
+
+(defn member* [a l]
+  (cond
+    (empty? l) false
+    (atom? (first l)) (or (= a (first l))
+                          (member* a (rest l)))
+    :else (or (member* a (first l))
+              (member* a (rest l))) ))
+
+(defn leftmost
+  "Finds the leftmost atom in a non-empty list of S-expressions that does not contain the empty list"
+  [l]
+  (cond
+    (atom? (first l)) (first l)
+    :else (leftmost (first l)) ))
+
+(defn eqlist1?
+  "True if the two lists are equal"
+  [l1 l2]
+  (cond
+    (and (empty? l1) (empty? l2)) true
+    (and (empty? l1) (atom? (first l2))) false
+    (empty? l1) false
+
+    (and (atom? (first l1)) (empty? l2)) false
+    (and (atom? (first l1)) (atom? (first l2))) (and (= (first l1) (first l2)) (eqlist1? (rest l1) (rest l2)))
+    (atom? (first l1)) false
+
+    ;; (first l1) is a list
+    (empty? l2) false
+    (atom? (first l2)) false
+    :else (and (eqlist1? (first l1) (first l2))
+               (eqlist1? (rest l1) (rest l2))) ))
+
+(defn eqlist?
+  "True if the two lists are equal"
+  [l1 l2]
+  (cond
+    (and (empty? l1) (empty? l2)) true
+    (or (empty? l1) (empty? l2)) false
+
+    (and (atom? (first l1))
+         (atom? (first l2))) (and (= (first l1) (first l2)) (eqlist? (rest l1) (rest l2)))
+
+    (or (atom? (first l1))
+        (atom? (first l2))) false
+    :else (and (eqlist? (first l1) (first l2))
+               (eqlist? (rest l1) (rest l2))) ))
+
+(defn rember2
+  "Removes the first occurence of the S-expr from a list of S-expr"
+  [s l]
+  (cond
+    (empty? l) ()
+    (= (first l) s) (rest l)
+    :else (cons (first l)
+                (rember2 s (rest l))) ))
+
+
+
+(deftest chap4test
+  (testing "rember*"
+    (is (= (rember* 'sauce '(((tomato sauce)) ((bean) sauce) (and ((flying)) sauce)))
+           '(((tomato)) ((bean)) (and ((flying))))
+           )))
+
+  (testing "insertR*"
+    (is (= (insertR* 'roast 'chuck '((how much (wood))
+                                     could
+                                     ((a (wood) chuck))
+                                     (((chuck)))
+                                     (if (a) ((wood chuck)))
+                                     could chuck wood))
+           '((how much (wood))
+             could
+             ((a (wood) chuck roast))
+             (((chuck roast)))
+             (if (a) ((wood chuck roast)))
+             could chuck roast wood) )))
+
+  (testing "occur*"
+    (is (= 5 (occur* 'banana '((banana)
+                               (split ((((banana ice)))
+                                       (cream (banana))
+                                       sherbet))
+                               (banana)
+                               (bread)
+                               (banana brandy))))))
+
+  (testing "subst*"
+    (is (= (subst* 'orange 'banana '((banana)
+                                     (split ((((banana ice)))
+                                             (cream (banana))
+                                             sherbet))
+                                     (banana)
+                                     (bread)
+                                     (banana brandy)))
+           '((orange)
+             (split ((((orange ice)))
+                     (cream (orange))
+                     sherbet))
+             (orange)
+             (bread)
+             (orange brandy))
+           )))
+
+  (testing "insertL*"
+    (is (= (insertL* 'pecker 'chuck '((how much (wood))
+                                      could
+                                      ((a (wood) chuck))
+                                      (((chuck)))
+                                      (if (a) ((wood chuck)))
+                                      could chuck wood))
+           '((how much (wood))
+             could
+             ((a (wood) pecker chuck))
+             (((pecker chuck)))
+             (if (a) ((wood pecker chuck)))
+             could pecker chuck wood)) ))
+
+  (testing "member*"
+    (is (= true (member* 'chips '((potato) (chips ((with) (chips))))))))
+
+  (testing "leftmost"
+    (is (= 'potato (leftmost '((potato) (chips ((with) (chips))))))))
+
+  (testing "eqlist?"
+    (is (= true (eqlist? '(strawberry ice cream) '(strawberry ice cream))))
+    (is (= false (eqlist? '(beef ((sausage)) (and (soda))) '(beef ((salami)) (and (soda))) )))
+    (is (= true (eqlist? '(beef ((sausage)) (and (soda))) '(beef ((sausage)) (and (soda))) ))) )
+
+  (testing "rember2"
+    (is (= '(a d) (rember2 '(a b) '(a (a b) d)) '(a d)))
+    (is (= '(a c) (rember2 '((b)) '(a ((b)) c))) '(a c))
+    (is (= '(((a))) (rember2 '(a) '( ( (a) )))) )  ))

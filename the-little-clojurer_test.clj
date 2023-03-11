@@ -218,3 +218,31 @@
 ;; ---------------------------------------------------------------------------
 ;; 6. Shadows
 ;; ---------------------------------------------------------------------------
+
+(deftest chap5test
+  (testing "numbered?"
+    (is (= true  (numbered? 1)))
+    (is (= true  (numbered? '(4 x 5))))
+    (is (= true  (numbered? '(3 + (4 x 5))))) )
+
+  (testing "value"
+    (is (= 1  (value 1)))
+    (is (= 20  (value '(4 x 5))))
+    (is (= 23  (value '(3 + (4 x 5))))) )
+
+  (testing "prefix-value"
+    (is (= 1  (prefix-value 1)))
+    (is (= 20  (prefix-value '(x 4 5))))
+    (is (= 23  (prefix-value '(+ 3 (x 4 5))))) )
+
+  (testing "Empty lists arithmetic"
+    (is (= true (sero? '())))
+    (is (= false (sero? '(()))))
+    (is (= '(()) (edd1 '())))
+    (is (= true (sero? (zub1 (edd1 '())))))
+    (is (= '(() () () () ()) (z+ '(() ()) '(() () ()))))) )
+
+
+;; ---------------------------------------------------------------------------
+;; 7. Friends and Relations
+;; ---------------------------------------------------------------------------

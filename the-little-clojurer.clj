@@ -386,3 +386,73 @@
 ;; ---------------------------------------------------------------------------
 ;; 6. Shadows
 ;; ---------------------------------------------------------------------------
+
+(defn numbered1? [aexp]
+  (cond
+    (atom? aexp)  (number? aexp)
+    (or (= (first (rest aexp)) '+)
+        (= (first (rest aexp)) 'x)
+        (= (first (rest aexp)) '↑)) (and (numbered1? (first aexp))
+                                         (numbered1? (first (rest (rest aexp)))))
+    :else false))
+
+(defn numbered? [aexp]
+  (cond
+    (atom? aexp)  (number? aexp)
+    :else (and (numbered? (first aexp))
+               (numbered? (first (rest (rest aexp))))) ))
+
+(defn value [aexp]
+ (cond
+    (atom? aexp)  aexp
+    (= (first (rest aexp)) '+) (+ (value (first aexp)) (value (first (rest (rest aexp)))))
+    (= (first (rest aexp)) 'x) (* (value (first aexp)) (value (first (rest (rest aexp)))))
+    (= (first (rest aexp)) '↑) (exp (value (first aexp)) (value (first (rest (rest aexp))))) ))
+
+(defn prefix-1st-sub-exp
+  [aexp]
+  (first (rest aexp)))
+
+(defn prefix-2nd-sub-exp
+  [aexp]
+  (first (rest (rest aexp))))
+
+(defn prefix-operator
+  [aexp]
+  (first aexp))
+
+(defn prefix-value [aexp]
+  (cond
+    (atom? aexp)  aexp
+    (= (prefix-operator aexp) '+) (+ (prefix-value (prefix-1st-sub-exp aexp))
+                                     (prefix-value(prefix-2nd-sub-exp aexp)))
+    (= (prefix-operator aexp) 'x) (* (prefix-value (prefix-1st-sub-exp aexp))
+                                     (prefix-value (prefix-2nd-sub-exp aexp)))
+    (= (prefix-operator aexp) '↑) (exp (prefix-value (prefix-1st-sub-exp aexp))
+                                       (prefix-value (prefix-2nd-sub-exp aexp))) ))
+
+;; representations of numbers with empty lists
+
+(defn sero? [n]
+  (empty? n))
+
+(defn edd1
+  "Like add1"
+  [n]
+  (cons '() n))
+
+(defn zub1
+  "Like sub1"
+  [n]
+  (rest n))
+
+(defn z+
+  "Add two numbers represented as empty lists"
+  [n m]
+  (cond
+    (sero? m) n
+    :else (edd1 (z+ n (zub1 m)))) )
+
+;; ---------------------------------------------------------------------------
+;; 7. Friends and Relations
+;; ---------------------------------------------------------------------------

@@ -87,7 +87,7 @@
     :else (cons (first lat) (subst2 new o1 o2 (rest lat)))))
 
 (defn multirember
-  "Removes the all occurence of the atom a from lat"
+  "Removes all the occurences of the atom a from lat"
   [a lat]
   (cond
     (empty? lat) ()
@@ -455,4 +455,117 @@
 
 ;; ---------------------------------------------------------------------------
 ;; 7. Friends and Relations
+;; ---------------------------------------------------------------------------
+
+(defn set? [lat]
+  (cond
+    (empty? lat) true
+    (member? (first lat) (rest lat)) false
+    :else (set? (rest lat))))
+
+(defn makeset [lat]
+  (cond
+    (empty? lat) '()
+    (member? (first lat) (rest lat))  (makeset (rest lat))
+    :else (cons (first lat) (makeset (rest lat)))))
+
+(defn makeset2 [lat]
+  (cond
+    (empty? lat) '()
+    :else (cons (first lat)
+                (makeset2
+                 (multirember (first lat) (rest lat))))))
+
+(defn subset? [set1 set2]
+  (cond
+    (empty? set1) true
+    :else (and (member? (first set1) set2)
+               (subset? (rest set1) set2))))
+
+(defn eqset? [set1 set2]
+  (and (subset? set1 set2)
+       (subset? set2 set1)))
+
+(defn intersect? [set1 set2]
+  (cond
+    (empty? set1) false
+    :else (or (member? (first set1) set2)
+              (intersect? (rest set1) set2))))
+
+(defn intersect [set1 set2]
+  (cond
+    (empty? set1) '()
+    (member? (first set1) set2)  (cons (first set1) (intersect (rest set1) set2))
+    :else (intersect (rest set1) set2)))
+
+(defn union [set1 set2]
+  (cond
+    (empty? set1) set2
+    (member? (first set1) set2) (union (rest set1) set2)
+    :else (cons (first set1) (union (rest set1) set2))))
+
+(defn set-diff
+  "Returns all the atoms of set1 that are not in set2"
+  [set1 set2]
+  (cond
+    (empty? set1) '()
+    (member? (first set1) set2) (set-diff (rest set1) set2)
+    :else (cons (first set1)
+                (set-diff (rest set1) set2)) )  )
+
+(defn intersectall [l-set]
+  (cond
+    (empty? (rest l-set)) (first l-set)
+    :t (intersect (first l-set)
+                  (intersectall  (rest l-set))) ))
+(defn a-pair? [x]
+  (cond
+    (atom? x) false
+    (empty? x) false
+    (empty? (rest x)) false
+    (empty? (rest (rest x))) true
+    :else false     ))
+
+(defn build
+  "Builds a pair"
+  [a b]
+  (cons a (cons b '())))
+
+(defn third [lst]
+  (first (rest (rest lst))))
+
+;; a rel (relation) is a set of pairs
+
+(defn fun?
+  "Tests if the keys of the given rel form a set. A fun is a finite function."
+  [rel]
+  (set? (firsts rel)))
+
+(defn revpair
+  "Reverses a pair"
+  [p]
+  (build (second p)(first p)))
+
+(defn revrel
+  "Reverses a rel"
+  [rel]
+  (cond
+    (empty? rel) '()
+    :else (cons (revpair (first rel))
+                (revrel (rest rel)))))
+
+(defn fullfun?
+  [rel]
+  "Tests if the inverse of rel is a finite function."
+  (fun? (revrel rel)))
+
+(defn seconds
+  "Accepts a list of S-exp and return a list of the second element of each."
+  [l]
+  (cond
+    (empty? l) l
+    :else (cons (second (first l)) (seconds (rest l)))))
+
+;; ---------------------------------------------------------------------------
+;; 8. Lambda the Ultimate
 ;; ---------------------------------------------------------------------------

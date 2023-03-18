@@ -2,6 +2,7 @@
   (:require [clojure.test :refer :all]
             [the-little-clojurer.core :refer :all]))
 
+
 ;; ---------------------------------------------------------------------------
 ;; 2. Do It, Do It Again, and Again, and Again...
 ;; ---------------------------------------------------------------------------
@@ -16,6 +17,7 @@
     (is (= false (member? 'tea ())))
     (is (= true (member? 'tea '(coffee tea or milk))))
     (is (= false (member? 'poached '(fried eggs and scrambled eggs))))))
+
 
 ;; ---------------------------------------------------------------------------
 ;; 3. Cons the Magnificent
@@ -60,8 +62,9 @@
   (testing "multiinsertL"
     (is (= (multiinsertL 'x 'a '(a b c a d)) '(x a b c x a d))))
 
-   (testing "multisubst"
+  (testing "multisubst"
     (is (= (multisubst 'x 'a '(a b c a d)) '(x b c x d)))) )
+
 
 ;; ---------------------------------------------------------------------------
 ;; 4. Numbers Games
@@ -135,11 +138,12 @@
     (is (= true (one? 1)))
     (is (= false (one? 5)))) )
 
+
 ;; ---------------------------------------------------------------------------
 ;; 5. Oh My Gawd: It's Full of Stars
 ;; ---------------------------------------------------------------------------
 
-(deftest chap4test
+(deftest chap5test
   (testing "rember*"
     (is (= (rember* 'sauce '(((tomato sauce)) ((bean) sauce) (and ((flying)) sauce)))
            '(((tomato)) ((bean)) (and ((flying))))
@@ -215,11 +219,12 @@
     (is (= '(a c) (rember2 '((b)) '(a ((b)) c))) '(a c))
     (is (= '(((a))) (rember2 '(a) '( ( (a) )))) )  ))
 
+
 ;; ---------------------------------------------------------------------------
 ;; 6. Shadows
 ;; ---------------------------------------------------------------------------
 
-(deftest chap5test
+(deftest chap6test
   (testing "numbered?"
     (is (= true  (numbered? 1)))
     (is (= true  (numbered? '(4 x 5))))
@@ -245,4 +250,61 @@
 
 ;; ---------------------------------------------------------------------------
 ;; 7. Friends and Relations
+;; ---------------------------------------------------------------------------
+
+(deftest chap7test
+  (testing "set?"
+    (is (= false (set? '(apple peaches apple plum))))
+    (is (= true (set? '(apple peaches pears plum)))))
+
+  (testing "makeset"
+    (is (= (makeset '(apple peach pear peach plum apple lemon peach)) '(pear plum apple lemon peach)))
+    (is (= (makeset2 '(apple peach pear peach plum apple lemon peach)) '(apple peach pear plum lemon))))
+
+  (testing "subset?"
+    (is (= true (subset? '(5 chicken wings) '(5 hamburgers 2 pieces fried chicken and light duckling wings))))
+    (is (= false (subset? '(5 chicken wings) '(5 hamburgers 2 pieces fried duckling wings)))))
+
+  (testing "eqset?"
+    (is (= true (eqset? '(6 large chickens with wings) '(6 chickens with large wings)))))
+
+  (testing "intersect?"
+    (is (= true (intersect? '(stewed tomatoes and macaroni) '(macaroni and cheese)))))
+
+  (testing "intersect"
+    (is (= '(and macaroni) (intersect '(stewed tomatoes and macaroni) '(macaroni and cheese)))))
+
+  (testing "union"
+    (is (= '(stewed tomatoes caserole macaroni and cheese)
+           (union '(stewed tomatoes and macaroni caserole) '(macaroni and cheese)))))
+
+  (testing "set-diff"
+    (is (= '(a c) (set-diff '(a b c d) '(d m b n)))))
+
+  (testing "intersectall"
+    (is (= (intersectall '((a b c) (c a d e) (e f g h a b)))
+           '(a))))
+
+  (testing "pair representation"
+    (is (a-pair? '(3 7)))
+    (is (a-pair? '((2) (pair))))
+    (is (not (a-pair? '())))
+    (is (not (a-pair? 0)))
+    (is (not (a-pair? '(3 7 11))))
+    ;;
+    (is (a-pair? (build 2 '(3))))
+    (is (= 3 (third '(1 2 3 4 5)))) )
+
+  (testing "relations"
+    (is (fun? '((8 3) (4 2) (7 6) (6 2) (3 4))))
+    (is (not (fun? '((d 4) (b 0) (b 9) (e 5) (g 4)))))
+    (is (= (revrel '((8 a) (pumpkin pie) (got sick)))
+           '((a 8) (pie pumpkin) (sick got))))
+    (is (not (fullfun? '((8 3) (4 2) (7 6) (6 2) (3 4)))))
+    (is (fullfun? '((8 3) (4 8) (7 6) (6 2) (3 4))))
+    (is (= (seconds '((a 1) (b 2))) '(1 2)))) )
+
+
+;; ---------------------------------------------------------------------------
+;; 8. Lambda the Ultimate
 ;; ---------------------------------------------------------------------------

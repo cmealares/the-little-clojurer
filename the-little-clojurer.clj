@@ -569,3 +569,232 @@
 ;; ---------------------------------------------------------------------------
 ;; 8. Lambda the Ultimate
 ;; ---------------------------------------------------------------------------
+
+(defn rember-f1
+  [test? a l]
+  (cond
+    (empty? l) '()
+    (test? a (first l)) (rest l)
+    :else (cons (first l)
+                (rember-f1 test? a (rest l)))))
+
+(defn eq?-c [a]
+  (fn [x] (= x a)))
+
+;; currying
+
+(defn rember-f
+  "The curryfied version of rember-f"
+  [test?]
+  (fn [a l]
+    (cond
+      (empty? l) '()
+      (test? a (first l)) (rest l)
+      :else (cons (first l)
+                  ((rember-f test?) a (rest l)))) ))
+
+(defn insertL-f
+  "Inserts the atom new to the left of the first occurrence of the atom old in lat"
+  [test?]
+  (fn insert2 [new old lat] ;; clojure allows to name this local function
+    (cond
+      (empty? lat) ()
+      (test? old (first lat)) (cons new lat)
+      :else (cons (first lat) (insert2 new old (rest lat))))))
+
+(defn insertR-f
+  "Inserts the atom new to the right of the first occurrence of the atom old in lat"
+  [test?]
+  (fn insert2
+    [new old lat]
+    (cond
+      (empty? lat) ()
+      (test? old (first lat)) (cons old (cons new (rest lat)))
+      :else (cons (first lat) (insert2 new old (rest lat))))))
+
+
+;; insert-g inserts either at the left or the right
+
+(defn seqL [new old l]
+  (cons new (cons old l)))
+
+(defn seqR [new old l]
+  (cons old (cons new l)))
+
+
+(defn insert-g [seq]
+  (fn [new old lat]
+    (cond
+      (empty? lat) ()
+      (= old (first lat)) (seq new old (rest lat))
+      :else (cons (first lat) ((insert-g seq) new old (rest lat))))))
+
+(defn seqS [new old lat]
+  (cons new lat))
+
+(defn seqrem
+  "When given this function, insert-g behaves like rember"
+  [new old lat]
+  lat)
+
+(defn atom-to-function [x]
+  (cond
+    (= x '+) +
+    (= x 'x) *
+    :else exp ))
+
+(defn value2 [aexp]
+ (cond
+    (atom? aexp)  aexp
+    :else
+    ((atom-to-function (prefix-operator aexp))
+     (value2 (prefix-1st-sub-exp aexp))
+     (value2 (prefix-2nd-sub-exp aexp)) )))
+
+(defn multirember-f
+  "Removes all the occurences of the atom a from lat"
+  [test?]
+  (fn mrm [a lat]
+    (cond
+      (empty? lat) ()
+      (test? a (first lat)) (mrm a (rest lat))
+      :else (cons (first lat) (mrm a (rest lat)) ))))
+
+
+(defn multiremberT
+  "Removes from lat all the atoms for which test? is true"
+  [test? lat]
+  (cond
+    (empty? lat) ()
+    (test? (first lat)) (multiremberT test? (rest lat))
+    :else (cons (first lat) (multiremberT test? (rest lat)) )))
+
+;; Here comes the difficult part
+
+;; !!! co = continuation or collector !!!
+
+(defn multirember&co
+  "Atoms of lat that are = to a are collected in one list ls2; the others are collected in a list ls1.
+  Finally, it calls (col ls1 ls2)"
+  [a lat col]
+  (cond
+    (empty? lat)        (col '() '())
+    (= (first lat) a)   (multirember&co a
+                                        (rest lat)
+                                        (fn [newlat seen]
+                                          (col newlat
+                                               (cons (first lat) seen))))
+    :else               (multirember&co a
+                                        (rest lat)
+                                        (fn [newlat seen]
+                                          (col (cons (first lat) newlat)
+                                               seen)))))
+
+(defn a-friend [x y]
+  (empty? y))
+
+(defn last-friend [x y]
+  (length x))
+
+
+(defn multiinsertLR
+  "Inserts the atom new to the left of oldL and to the right of oldR in lat,
+   if oldL and oldR are different."
+  [new oldL oldR lat]
+  (cond
+    (empty? lat) ()
+    (= oldL (first lat)) (cons new
+                              (cons oldL
+                                    (multiinsertLR new oldL oldR (rest lat))))
+    (= oldR (first lat)) (cons oldR
+                               (cons new
+                                     (multiinsertLR new oldL oldR (rest lat))))
+    :else (cons (first lat)
+                (multiinsertLR new oldL oldR (rest lat)))))
+
+;; Now transform multiinsertLR into the continuation version
+;; which accepts a collector. It will call the collector on the new lat,
+;; the number of left insertions and the number of right insertions.
+
+(defn multiinsertLR&co
+  "Inserts new to the left of oldL and to the right of oldR
+   in lat if oldR and oldL are different."
+  [new oldL oldR lat col]
+  (cond
+    (empty? lat)            (col '() 0 0)
+    (= (first lat) oldL)    (multiinsertLR&co new oldL oldR
+                                              (rest lat)
+                                              (fn [newlat L R]
+                                                (col (cons new
+                                                           (cons oldL newlat))
+                                                     (add1 L)
+                                                     R)))
+
+    (= (first lat) oldR)    (multiinsertLR&co new oldL oldR
+                                              (rest lat)
+                                              (fn [newlat L R]
+                                                (col (cons oldR
+                                                           (cons new newlat))
+                                                     L
+                                                     (add1 R))))
+
+    :else                   (multiinsertLR&co new oldL oldR
+                                              (rest lat)
+                                              (fn [newlat L R]
+                                                (col (cons (first lat) newlat)
+                                                 L
+                                                 R))) ))
+
+
+(defn evens-only*
+  "Removes all odd numbers from a list of nested numbers"
+  [l]
+  (cond
+    (empty? l) '()
+    (atom? (first l)) (cond
+                        (even? (first l)) (cons (first l) (evens-only* (rest l)))
+                        :else (evens-only* (rest l)))
+    :else (cons (evens-only* (first l))
+                (evens-only* (rest l)))))
+
+(defn evens-only*&co
+  "Collects the odd numbers from a list of nested numbers,
+  the product of the even numbers and the sum of the odd numbers.
+  Then calls col on the results."
+  [l col]
+  (cond
+    (empty? l)
+    (col '() 1 0)
+
+    (atom? (first l))
+    (cond
+      (even? (first l)) (evens-only*&co (rest l)
+                                        (fn [newl p s]
+                                          (col (cons (first l) newl)
+                                               (* p (first l))
+                                               s)))
+      :else             (evens-only*&co (rest l)
+                                        (fn [newl p s]
+                                          (col newl
+                                               p
+                                               (+ s (first l))))) )
+
+    :else
+    (evens-only*&co (first l)
+                    (fn [al ap as]
+                      (evens-only*&co (rest l)
+                                      (fn [dl dp ds]
+                                        (col (cons al dl)
+                                             (* ap dp)
+                                             (+ dp ds)))))) ))
+
+(defn the-last-friend [newl product sum]
+  (cons sum
+        (cons product
+              newl)))
+
+
+
+;; ---------------------------------------------------------------------------
+;; 9. …and Again, and Again, and Again,…
+;; ---------------------------------------------------------------------------

@@ -308,3 +308,62 @@
 ;; ---------------------------------------------------------------------------
 ;; 8. Lambda the Ultimate
 ;; ---------------------------------------------------------------------------
+
+(deftest chap8test
+  (testing "rember-f"
+    (is (= '(6 2 3) (rember-f1 = 5 '(6 2 5 3))))
+    (is (= '(6 2 5 3) (rember-f1 = '(5 2) '(6 2 5 (5 2) 3))))
+    (is ((eq?-c 55) 55))
+    (is (not ((eq?-c 55) 1)))
+    (is (= ((rember-f =) 'tuna '(shrimp salad and tuna salad))
+           '(shrimp salad and salad))))
+
+  (testing "insert-g"
+    (is (= ((insertL-f =) 'a 'b '(a b c))
+           '(a a b c)))
+    (is (= ((insert-g seqL) 'x 'b '(a b c))
+           '(a x b c)))
+    (is (= ((insert-g seqS) 'x 'b '(a b c))
+           '(a x c)))
+    (is (= ((insert-g seqrem) 'x 'b '(a b c))
+           '(a c))))
+
+  (testing "value2"
+    (is (= 7 (value2 '(+ 1 (x 2 3))))))
+
+  (testing "multirember"
+    (is (= ((multirember-f =) 'tuna '(shrimp salad tuna salad and tuna))
+           '(shrimp salad salad and)))
+    (is (= (multiremberT #(= % 'tuna) '(shrimp salad tuna salad and tuna)  )
+           '(shrimp salad salad and))))
+
+  (testing "multirember&co"
+    (is (= true (multirember&co 'tuna '() a-friend)))
+    (is (= false (multirember&co 'tuna '(tuna) a-friend)))
+
+    (is (= false (multirember&co 'tuna
+                                 '(strawberries tuna and swordfish)
+                                 a-friend)))
+    (is (= 3 (multirember&co 'tuna '(strawberries tuna and swordfish) last-friend))))
+
+  (testing "multiinsertLR"
+    (is (= (multiinsertLR 'n 'l 'r '(l x r x l r ))
+           '(n l x r n x n l r n))))
+
+  (testing "multiinsertLR&co"
+    (is (= 22 (multiinsertLR&co 'salty 'fish 'chips '(chips and fish or fish and chips)
+                                (fn [lat l r] (+ (* 10 l) r))))))
+
+  (testing "evens only"
+    (is (= (evens-only* '(1 3 2 5 6)) '(2 6)))
+    (is (= (evens-only* '((9 1 2 8) (3 10 ((9 9) 7 6) 2)))
+           '((2 8) (10 (() 6) 2))))
+
+    (is (= (evens-only*&co '(1 2 11 4) the-last-friend)
+           '(12 8 2 4)))
+    (is (= (evens-only*&co '((9 1 2 8) 3 10 ((9 9) 7 6) 2) the-last-friend)
+           '(125 1920 (2 8) 10 (() 6) 2) ))    ))
+
+;; ---------------------------------------------------------------------------
+;; 9. …and Again, and Again, and Again,…
+;; ---------------------------------------------------------------------------

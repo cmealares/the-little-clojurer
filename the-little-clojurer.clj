@@ -798,3 +798,207 @@
 ;; ---------------------------------------------------------------------------
 ;; 9. …and Again, and Again, and Again,…
 ;; ---------------------------------------------------------------------------
+
+(defn keep-looking [a sorn lat]
+  (cond
+    ;; unnatural recursion: it does not recur on a part of lat
+    (number? sorn) (keep-looking a (pick sorn lat) lat)
+    :else (= sorn a)))
+
+;; A partial function: it may never stop"
+(defn looking [a lat]
+  (keep-looking a (pick 1 lat) lat))
+
+;; A function that never reaches its goal
+(defn eternity [x]
+  (eternity x))
+
+(defn shift [pair]
+  "Takes a pair whose first component is a pair and builds a pair by shifting the second part of the first component into the second component"
+  (build (first (first pair))
+         (build (second (first pair))
+                (second pair))))
+
+(defn align [pora]
+  (cond
+    (atom? pora) pora
+    (a-pair? (first pora)) (align (shift pora))
+    ;; (shift pora) is no smaller than pora, hence we are not closer to the goal
+    :else (build (first pora)
+                 (align (second pora)))))
+
+(defn length* [pora]
+  "Counts the atoms in a pora (pair or atom)"
+  (cond
+    (atom? pora)  1
+    :else (+
+           (length* (first pora))
+           (length* (second pora)))))
+
+(defn weight* [pora]
+  "Measure the length of the argument of align"
+  (cond
+    (atom? pora)  1
+    :else (+ (* 2 (weight* (first pora)))
+             (weight* (second pora)))))
+
+(defn shuffle [pora]
+  (cond
+    (atom? pora) pora
+    (a-pair? (first pora))  (shuffle (revpair pora))
+    :else  (build (first pora)
+                  (shuffle (second pora)))))
+
+(defn A [n m]
+  (cond
+    (zero? n) (add1 m)
+    (zero? m) (A (sub1 n) 1)
+    :else (A (sub1 n)
+             (A n (sub1 m)))))
+
+;; writing length with lambdas only (no defn)
+
+;; length0
+(fn [l]
+  (cond
+    (empty? l) 0
+    :else (add1 (eternity (rest l)))))
+
+;; length<=1
+(fn [l]
+  (cond
+    (empty? l) 0
+    :else (add1
+           ((fn [l]
+              (cond
+                (empty? l) 0
+                :else (add1 (eternity (rest l))))) (rest l) ) )))
+
+;; here is a function that creates length0
+((fn [length]
+   (fn [l]
+     (cond
+       (empty? l) 0
+       :else (add1 (length (rest l))))))
+ eternity)
+
+;; we can name this function as mk-length
+((fn [mk-length]
+   (mk-length eternity))
+ (fn [length]
+   (fn [l]
+     (cond
+       (empty? l) 0
+       :else (add1 (length (rest l)))))) )
+
+;; we can pass mk-length to mk-length instead of eternity
+;; and this is still length0
+((fn [mk-length]
+   (mk-length mk-length))
+ (fn [length]
+   (fn [l]
+     (cond
+       (empty? l) 0
+       :else (add1 (length (rest l)))))) )
+
+;; we could even use mk-length instead of length
+((fn [mk-length]
+   (mk-length mk-length))
+ (fn [mk-length]
+   (fn [l]
+     (cond
+       (empty? l) 0
+       :else (add1 (mk-length (rest l)))))) )
+
+;; now we can use the mk-length argument to create a recursive call
+;; and this gives length<=1
+((fn [mk-length]
+   (mk-length mk-length))
+ (fn [mk-length]
+   (fn [l]
+     (cond
+       (empty? l) 0
+       :else (add1 ((mk-length eternity)
+                    (rest l)))))) )
+
+;; we can keep passing mk-length to itself
+;; and this gives length!
+((fn [mk-length]
+   (mk-length mk-length))
+ (fn [mk-length]
+   (fn [l]
+     (cond
+       (empty? l) 0
+       :else (add1 ((mk-length mk-length)
+                    (rest l)))))) )
+
+;; how to extract a function that looks like length?
+;; extract the application of mk-length to itself and call it length
+;; stack overflow
+; ((fn [mk-length]
+;    (mk-length mk-length))
+;  (fn [mk-length]
+;    ((fn [length]
+;       (fn [l]
+;         (cond
+;           (empty? l) 0
+;           :else (add1 (length (rest l))))))
+;     (mk-length mk-length))) ) ;; because this never returns
+
+;; we can fix it by turning the application of mk-length to itself in the last correct version
+;; into a function
+((fn [mk-length]
+   (mk-length mk-length))
+ (fn [mk-length]
+   (fn [l]
+     (cond
+       (empty? l) 0
+       :else (add1
+              ((fn [x]
+                 ((mk-length mk-length) x))
+               (rest l)))))) )
+
+;; then move out the new function
+;; and we get length back
+((fn [mk-length]
+   (mk-length mk-length))
+ (fn [mk-length]
+   ((fn [length]
+      (fn [l]
+        (cond
+          (empty? l) 0
+          :else (add1 (length (rest l))))))
+    (fn [x]
+      ((mk-length mk-length) x)) )) )
+
+;; extract the function that looks like length and give it a name
+((fn [le]
+   ((fn [mk-length]
+      (mk-length mk-length))
+    (fn [mk-length]
+      (le (fn [x]
+            ((mk-length mk-length) x)) )) ))
+ (fn [length]
+   (fn [l]
+     (cond
+       (empty? l) 0
+       :else (add1 (length (rest l))))))
+)
+
+;; applicative order Y combinator
+(defn Y [le]
+  ((fn [f] (f f))
+   (fn [f]
+     (le (fn [x] ((f f) x))))))
+
+;; define length with the Y combinator
+(defn ylength [x]
+  ((Y (fn [length]
+        (fn [l]
+          (cond
+            (empty? l) 0
+            :else (add1 (length (rest l))))))) x))
+
+;; ---------------------------------------------------------------------------
+;; 10. What is the value of all this?
+;; ---------------------------------------------------------------------------

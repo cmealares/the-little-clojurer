@@ -367,3 +367,28 @@
 ;; ---------------------------------------------------------------------------
 ;; 9. …and Again, and Again, and Again,…
 ;; ---------------------------------------------------------------------------
+
+(deftest chap9test
+  (testing "looking"
+    (is (looking 'caviar '(6 2 4 caviar 5 7 3)))
+    (is (not (looking 'caviar '(6 2 grits caviar 5 7 3))))
+    (is (= (shift '((a b) c)) '(a (b c))))
+    (is (= (shift '((a b) (c d))) '(a (b (c d)))))
+    (is (= 7 (weight* '((a b) c))))
+    (is (= 5 (weight* '(a (b c))))))
+
+  (testing "shift"
+    (is (= '(a (b c)) (shift '((a b) c))))
+    (is (= '(a (b (c d))) (shift '((a b) (c d))))))
+
+  (testing "shuffle"
+    (is (= '(a (b c)) (shuffle '(a (b c)))))
+    (is (= '(a b) (shuffle '(a b))))
+    (is (= 2 (A 1 0)))
+    (is (= 3 (A 1 1)))
+    (is (= 7 (A 2 2))))
+
+  (testing "ylength"
+    (is (= 0 (ylength '())))
+    (is (= 1 (ylength '(a))))
+    (is (= 5 (ylength '(a b c d e)))) ))

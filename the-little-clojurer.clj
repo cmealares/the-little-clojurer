@@ -5,8 +5,8 @@
 ;; Preface
 ;; ---------------------------------------------------------------------------
 
-(defn atom? [x]
-  (not (coll? x)))
+(def atom?
+    (complement coll?))
 
 ;; ---------------------------------------------------------------------------
 ;; 1. Toys
@@ -457,11 +457,11 @@
 ;; 7. Friends and Relations
 ;; ---------------------------------------------------------------------------
 
-(defn set? [lat]
+(defn set2? [lat]
   (cond
     (empty? lat) true
     (member? (first lat) (rest lat)) false
-    :else (set? (rest lat))))
+    :else (set2? (rest lat))))
 
 (defn makeset [lat]
   (cond
@@ -539,7 +539,7 @@
 (defn fun?
   "Tests if the keys of the given rel form a set. A fun is a finite function."
   [rel]
-  (set? (firsts rel)))
+  (set2? (firsts rel)))
 
 (defn revpair
   "Reverses a pair"
@@ -842,12 +842,12 @@
     :else (+ (* 2 (weight* (first pora)))
              (weight* (second pora)))))
 
-(defn shuffle [pora]
+(defn shuffle2 [pora]
   (cond
     (atom? pora) pora
-    (a-pair? (first pora))  (shuffle (revpair pora))
+    (a-pair? (first pora))  (shuffle2 (revpair pora))
     :else  (build (first pora)
-                  (shuffle (second pora)))))
+                  (shuffle2 (second pora)))))
 
 (defn A [n m]
   (cond
@@ -1002,3 +1002,235 @@
 ;; ---------------------------------------------------------------------------
 ;; 10. What is the value of all this?
 ;; ---------------------------------------------------------------------------
+
+(def new-entry build)
+
+(defn lookup-in-entry-help [name names values entry-f]
+  (cond
+    (empty? names) (entry-f name)
+    (= name (first names)) (first values)
+    :else (lookup-in-entry-help name
+                                (rest names)
+                                (rest values)
+                                entry-f) ))
+
+(defn lookup-in-entry
+  "An entry is a pair of lists of equal lengths where the first list is a set of names. And the second is a list of values."
+  [name entry entry-f]
+  (lookup-in-entry-help name
+                        (first entry)
+                        (second entry)
+                        entry-f))
+
+(defn extend-table [entry table]
+  (conj table entry))
+
+(defn lookup-in-table
+  "A table (aka environment) is a list of entries."
+  [name table table-f]
+  (cond
+    (empty? table) (table-f name)
+    :else (lookup-in-entry name
+                           (first table)
+                           (fn [name]
+                             (lookup-in-table name
+                                              (rest table)
+                                              table-f) )))  )
+
+;; an interpreter
+
+(declare *identifier)
+(declare *const)
+(declare *cond)
+(declare *quote)
+(declare *lambda)
+(declare *application)
+
+(defn atom-to-action
+  "Produces the correct action for each possible atom"
+  [a]
+  (cond
+    (number? a) *const
+    (= a true) *const
+    (= a false) *const
+    (= a 'cons) *const
+    (= a 'first) *const
+    (= a 'rest) *const
+    (= a 'empty?) *const
+    (= a '=) *const
+    (= a 'atom?) *const
+    (= a 'zero?) *const
+    (= a 'add1) *const
+    (= a 'sub1) *const
+    (= a 'number?) *const
+    :else *identifier))
+
+(defn list-to-action
+  "Produces the correct action for a list (non-atomic S-expression)"
+  [e]
+  (cond
+   (atom? (first e)) (cond
+                       (= (first e) 'quote)  *quote
+                       (= (first e) 'lambda) *lambda
+                       (= (first e) 'cond)   *cond
+                       :else *application)
+   :else *application))
+
+(defn expression-to-action
+  "Produces the correct action for each possible S-expression"
+  [e]
+  (cond
+    (atom? e) (atom-to-action e)
+    :else (list-to-action e)))
+
+(defn meaning [e table]
+  ((expression-to-action e) e table))
+
+(defn value3 [e]
+  (meaning e '()))
+
+;; actions
+
+(defn *const [e table]
+  (cond
+    (number? e) e
+    (= e true) true
+    (= e false) false
+    :else (build :primitive e) ))
+
+(defn *quote [e table]
+  (second e))
+
+(defn initial-table [name]
+  (throw (Exception. "Identifier not found" name)))
+
+(defn *identifier [e table]
+  (lookup-in-table e table initial-table))
+
+(defn *lambda
+  "Returns a list that has the form: (:non-primitive (env-table lambda-parameters lambda-body))"
+  [e table]
+  (build :non-primitive
+         (conj (rest e) table)))
+
+;; helpers to get the parts of a non-primitive
+(def table-of first)
+(def formals-of second)
+(def body-of third)
+
+(def question-of first)
+(def answer-of second)
+
+(defn else?
+  "Is this the :else clause of a cond form"
+  [x]
+  (cond
+    (atom? x) (= x :else)
+    :else false) )
+
+(defn evcon
+  "Evaluate a cond expression. "
+  [lines table]
+  (cond
+    (else? (question-of lines))
+    (meaning (answer-of lines) table)
+
+    (meaning (question-of lines) table)
+    (meaning (answer-of lines) table)
+
+    :else
+    (evcon (rest (rest lines)) table) ))
+
+(def cond-lines-of rest)
+
+(defn *cond [e table]
+  (evcon (cond-lines-of e) table))
+
+(defn evlis
+  "Takes a list of (representations of) arguments and a table and returns a list of the meaning of each argument"
+  [args table]
+  (cond
+    (empty? args)
+    '()
+
+    :else
+    (conj (evlis (rest args) table)
+          (meaning (first args) table) ) ))
+
+(declare apply2)
+(def function-of first)
+(def arguments-of rest)
+(defn *application [e table]
+  (apply2
+   (meaning (function-of e) table)
+   (evlis (arguments-of e) table)))
+
+(defn primitive?
+  "Is l the representation of a primitive function?"
+  [l]
+  (= (first l) :primitive))
+
+(defn non-primitive?
+  "Is l the representation of a non-primitive function?"
+  [l]
+  (= (first l) :non-primitive))
+
+(declare apply-primitive)
+(declare apply-closure)
+(defn apply2 [fun vals]
+  (cond
+    (primitive? fun)
+    (apply-primitive (second fun) vals)
+
+    (non-primitive? fun)
+    (apply-closure (second fun) vals)))
+
+(defn atom?* [x]
+  (cond
+   (atom? x) true
+   (empty? x) false
+   (= (first x) :primitive) true
+   (= (first x) :non-primitive) true
+   :else false))
+
+(defn apply-primitive [name vals]
+  (cond
+    (= name 'cons)
+    (cons (first vals) (second vals) )
+
+    (= name 'first)
+    (first (first vals))
+
+    (= name 'rest)
+    (rest (first vals))
+
+    (= name 'empty?)
+    (empty? (first vals))
+
+    (= name '=)
+    (= (first vals) (second vals))
+
+    (= name 'atom?)
+    (atom?* (first vals))
+
+    (= name 'zero?)
+    (zero? (first vals))
+
+    (= name 'add1)
+    (add1 (first vals))
+
+    (= name 'sub1)
+    (sub1 (first vals))
+
+    (= name 'number?)
+    (number? (first vals))
+
+    :else
+    (throw (Exception. "Unknown primitive" name)) ))
+
+
+(defn apply-closure [closure vals]
+  (meaning (body-of closure)
+           (extend-table (new-entry (formals-of closure)
+                                    vals)
+                         (table-of closure))))

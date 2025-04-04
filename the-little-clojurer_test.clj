@@ -253,9 +253,9 @@
 ;; ---------------------------------------------------------------------------
 
 (deftest chap7test
-  (testing "set?"
-    (is (= false (set? '(apple peaches apple plum))))
-    (is (= true (set? '(apple peaches pears plum)))))
+  (testing "set2?"
+    (is (= false (set2? '(apple peaches apple plum))))
+    (is (= true (set2? '(apple peaches pears plum)))))
 
   (testing "makeset"
     (is (= (makeset '(apple peach pear peach plum apple lemon peach)) '(pear plum apple lemon peach)))
@@ -381,9 +381,9 @@
     (is (= '(a (b c)) (shift '((a b) c))))
     (is (= '(a (b (c d))) (shift '((a b) (c d))))))
 
-  (testing "shuffle"
-    (is (= '(a (b c)) (shuffle '(a (b c)))))
-    (is (= '(a b) (shuffle '(a b))))
+  (testing "shuffle2"
+    (is (= '(a (b c)) (shuffle2 '(a (b c)))))
+    (is (= '(a b) (shuffle2 '(a b))))
     (is (= 2 (A 1 0)))
     (is (= 3 (A 1 1)))
     (is (= 7 (A 2 2))))
@@ -392,3 +392,73 @@
     (is (= 0 (ylength '())))
     (is (= 1 (ylength '(a))))
     (is (= 5 (ylength '(a b c d e)))) ))
+
+;; ---------------------------------------------------------------------------
+;; 10. What is the value of all this?
+;; ---------------------------------------------------------------------------
+
+(deftest chap10test
+  (testing "environment"
+    (is (= '((appetizer entrée beverage) (paté boeuf vin))
+           (new-entry '(appetizer entrée beverage) '(paté boeuf vin))) )
+    (is (= "tastes"
+           (lookup-in-entry :entrée
+                            '((:appetizer :entrée :beverage) ("food" "tastes" "good"))
+                            (fn [name] '()))))
+    (is (= "spaghetti"
+           (lookup-in-table :entrée
+                            '(((:entrée :dessert) ("spaghetti" "spumoni"))
+                              ((:appetizer :entrée) ("food" "tastes")))
+                            (fn [name] '()) ))))
+
+  (testing "value3"
+    (is (= 5 (value3 5)))
+    (is (= true (value3 true)))
+    (is (= false (value3 false)))
+    (is (= 'nothing (value3 '(quote nothing))))
+    ;; value of identifier
+    (is (= 555 (meaning 'toto '(((toto) (555))))))
+    ;; value of lambda
+    (is (= '(:non-primitive ((((y z) ((8) 9))) ; environment
+                            (x)               ; lambda parameters
+                            (cons x y)))      ; body
+           (meaning '(lambda (x) (cons x y))
+                    '(((y z) ((8) 9))))) )
+
+    (is (= '(((y z) ((8) 9)))
+           (table-of '((((y z) ((8) 9))) (x) (cons x y)))) )
+    (is (= '(x)
+           (formals-of '((((y z) ((8) 9))) (x) (cons x y)))) )
+    (is (= '(cons x y)
+           (body-of '((((y z) ((8) 9))) (x) (cons x y)))) )
+
+    (is (= 555
+           (*cond '(cond :else 555) '())))
+    (is (= 555
+           (*cond '(cond false 444 :else 555) '())))
+    (is (= 5
+           (*cond '(cond coffee klatsch :else party)
+                  '(((coffee) (true))
+                    ((klatsch party) (5 (6)) )))))
+
+    (is (= 1
+           (*application '(first '(1 2 3)) '())))
+    (is (= '(2 3)
+           (*application '(rest '(1 2 3)) '())))
+    (is (= '(5 2)
+           (*application '(cons x '(2)) '(((x) (5))))))
+    (is (= true
+           (*application '(= x 5) '(((x) (5))))))
+    (is (= false
+           (*application '(= x 5) '(((x) (6))))))
+    (is (= true
+           (*application '(empty? '()) '())))
+    (is (= 6
+           (*application '(add1 5) '())))
+    (is (= 4
+           (*application '(sub1 5) '())))
+    (is (= 6
+           (*application '((lambda (x) (add1 x)) 5) '() )))
+    (is (= '(6 7)
+           (value3 '((lambda (x y) (cons (add1 x) (cons (add1 y) '()))) 5 6)) ))
+    ) )
